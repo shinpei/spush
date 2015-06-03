@@ -6,25 +6,29 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 )
 
 type Data struct {
-	Id    string
-	Title string
+	Id    string `json:"id"`
+	Title string `json:"title"`
 }
 
 func main() {
 
-	b, err := json.Marshal(Data{"1", "mybook"})
+	b, err := json.Marshal(`{"add": { "doc" : { "id" : "hoge", "title": "hi"} }}`)
+	ss := string(b[:])
+	print(ss)
 	if err != nil {
 		panic(err)
 	}
-	respB, err := Post("http://localhost:8983/update?wt=json", &b)
+	respB, err := Post("http://localhost:8983/solr/update?wt=json&commit=true", &b)
 	if err != nil {
 		panic(err)
 	}
 	var datas []Data
 	err = json.Unmarshal(respB, &datas)
+
 	if err != nil {
 		s := string(respB[:])
 		println(s)
@@ -50,6 +54,8 @@ func Post(url string, payload *[]byte) ([]byte, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, bytes.NewReader(*payload))
 	req.Header.Add("Content-type", "application/json")
+	dump, _ := httputil.DumpRequestOut(req, true)
+	fmt.Printf("%s", dump)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
