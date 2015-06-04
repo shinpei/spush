@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
+	"github.com/shinpei/spush/golr"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"runtime"
 )
 
@@ -18,38 +15,23 @@ type Data struct {
 }
 
 func main() {
-	cpus := runtime.NumCPU()
-	runtime.GOMAXPROCS(cpus)
+	con := golr.Connect("localhost", 8983)
 
 	d := []Data{{
-		Id:        "hige",
+		Id:        "hige2",
 		Title:     "hoge",
 		Text:      "fuga",
 		TextCount: 12,
 	},
 	}
-
-	b, err := json.Marshal(d)
-	ss := string(b[:])
-	println(ss)
-	if err != nil {
-		panic(err)
+	opt := &golr.SolrAddOption{
+		Concurrency: runtime.NumCPU(),
 	}
+	con.AddDocument(d, opt)
 
-	respB, err := Post("http://localhost:8983/solr/update/json?commit=true", b)
+	//con.AddJSONFile(myjson, opt)
+	//con.AddXMLFile(myxml, opt)
 
-	if err != nil {
-		panic(err)
-	}
-	var datas interface{}
-	err = json.Unmarshal(respB, &datas)
-
-	if err != nil {
-		s := string(respB[:])
-		println(s)
-	} else {
-		fmt.Printf("%x\n", datas)
-	}
 }
 
 func Get(url string) ([]byte, error) {
@@ -62,24 +44,5 @@ func Get(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return body, nil
-}
-
-func Post(url string, payload []byte) ([]byte, error) {
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
-	req.Header.Add("Content-type", "application/json")
-	dump, _ := httputil.DumpRequestOut(req, true)
-	fmt.Printf("%s", dump)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("Received %d bytes\n", len(body))
 	return body, nil
 }
