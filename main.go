@@ -1,11 +1,14 @@
 package main
 
 import (
+	"flag"
 	"github.com/shinpei/spush/golr"
 	"io/ioutil"
 	"net/http"
 	"runtime"
 )
+
+var inputFile = flag.String("infile", "jawiki-latest-pages-articles.xml", "Input file path")
 
 type Data struct {
 	Id        string `json:"id"`
@@ -18,7 +21,7 @@ func main() {
 	con := golr.Connect("localhost", 8983)
 
 	d := []Data{{
-		Id:        "hige2",
+		Id:        "hige3",
 		Title:     "hoge",
 		Text:      "fuga",
 		TextCount: 12,
@@ -27,11 +30,10 @@ func main() {
 	opt := &golr.SolrAddOption{
 		Concurrency: runtime.NumCPU(),
 	}
-	con.AddDocument(d, opt)
+	con.AddDocuments(d, opt)
 
 	//con.AddJSONFile(myjson, opt)
-	//con.AddXMLFile(myxml, opt)
-
+	con.AddXMLFile(*inputFile, opt)
 }
 
 func Get(url string) ([]byte, error) {
