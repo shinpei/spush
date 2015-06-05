@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+
 	"os"
 	"regexp"
-	"time"
+	"strconv"
+	"strings"
 )
 
-var filter, _ = regexp.Compile("^file:.*|^talk:.*|^special:.*|^wikipedia:.*|^wikionary:.*|^user:.*|^user_talk:.*")
+var filter, _ = regexp.Compile("^%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%3A.*|^help%3A.*|^talk%3A.*|^special%3A.*|^wikipedia%3A.*|^wikionary%3A.*|^user%3A.*|^user_talk%3A.*|^portal%3A.*|^mediawiki%3A.*|^template%3A.*|^Category%3A.*")
 
 type SolrConnector struct {
 	host string
@@ -74,14 +77,14 @@ func PostUpdate(host string, port int, payload []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Received %d bytes\n", len(body))
+	fmt.Printf("Received %d bytes, ", len(body))
 	return body, nil
 }
 
 //TODO: App-specific structure will be removed
 
 type Page struct {
-	Id        string `json:"id"`
+	Id        string `xml:"id" json:"id"`
 	Title     string `xml:"title" json:"title"`
 	Text      string `xml:"revision>text" json:"text"`
 	TextCount int    `json:"text_count"`
@@ -97,8 +100,10 @@ func (sc *SolrConnector) AddXMLFile(path string, opt *SolrAddOption) {
 
 	decoder := xml.NewDecoder(xmlFile)
 	var inElement string
-	var pa []Page = make([]Page, opt.Concurrency)
+	var pa []Page = make([]Page, opt.Concurrency*500)
 	idx := 0
+	var total int64 = 0
+	var pushed int64 = 0
 	for {
 		t, _ := decoder.Token()
 		if t == nil {
@@ -108,20 +113,40 @@ func (sc *SolrConnector) AddXMLFile(path string, opt *SolrAddOption) {
 		case xml.StartElement:
 			inElement = se.Name.Local
 			if inElement == "page" {
+
 				var p Page
 				decoder.DecodeElement(&p, &se)
-				p.TextCount = len(p.Text)
-				p.Id = string(time.Now().UnixNano())
-				pa[idx] = p
-				idx++
+				p.Title = CannoTitle(p.Title)
+				m := filter.MatchString(p.Title)
+				if !m {
+					p.Title, _ = url.QueryUnescape(p.Title)
+					p.TextCount = len(p.Text)
+					total++
+					pa[idx] = p
+					idx++
+					fmt.Println("Added " + strconv.FormatInt(total, 10) + "/" + strconv.FormatInt(pushed, 10) + " for now..")
+				} else {
+					//println(p.Title)
+				}
+				pushed++
 			}
 			break
 		default:
+			break
 		}
-		if idx == opt.Concurrency-1 {
+		if idx == opt.Concurrency*500-1 {
+			println("hi")
 			sc.AddDocuments(pa, opt)
+			println("bye")
 			idx = 0
 		}
-
 	}
+
+}
+
+func CannoTitle(title string) string {
+	can := strings.ToLower(title)
+	can = strings.Replace(can, " ", "_", -1)
+	can = url.QueryEscape(can)
+	return can
 }
