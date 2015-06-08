@@ -24,20 +24,25 @@ type SolrAddOption struct {
 // Assumes it'll get arrays of some data structure
 func (sc *SolrConnector) AddDocuments(container interface{}, opt *SolrAddOption) {
 
+	var err error
 	// todo: size constrain should be placed here
+	defer func() {
+		if err != nil {
+			log.Printf("Error occured, uploading document failed")
+		}
+	}()
+
 	b, err := json.Marshal(container)
 	if err != nil {
-		log.Println("Json parsing failed:", err)
+		log.Println("Failed at marshaling json structure, ", err)
 	}
 	respB, err := PostUpdate(sc.host,
 		sc.port,
 		b)
 	if err != nil {
-		log.Println("Update failed")
-		opt.ReceiverChannel <- []byte("error")
-	} else {
-		opt.ReceiverChannel <- respB
+		log.Println(err)
 	}
+	opt.ReceiverChannel <- respB
 }
 
 func Connect(host string, port int) *SolrConnector {
@@ -60,7 +65,7 @@ func PostUpdate(host string, port int, payload []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Recieved %d bytes.\n", len(body))
+	log.Printf("Recieved %d bytes.\n", len(body))
 	return body, nil
 }
 
@@ -74,7 +79,7 @@ func (sc *SolrConnector) UploadXMLFile(
 	opt *SolrAddOption) {
 	xmlFile, err := os.Open(path)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		log.Println("Error opening file:", err)
 		return
 	}
 	defer xmlFile.Close()
