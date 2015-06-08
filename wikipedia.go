@@ -92,12 +92,11 @@ func (w *WikipediaXMLWalker) Walk(sc *golr.SolrConnector,
 		if idx == opt.Concurrency*PageChunk-1 {
 			fmt.Println("Added " + strconv.FormatInt(total, 10) + "/" + strconv.FormatInt(pushed, 10) + " for now..")
 			inputChan <- pa
-			//			msg := <-recvChan
-			//			fmt.Println("INFO: " + string(msg[:]))
 			idx = 0
 		}
 	}
 	close(inputChan)
+	close(recvChan)
 	wg.Wait()
 
 }
