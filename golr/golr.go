@@ -36,6 +36,7 @@ func (sc *SolrConnector) AddDocuments(container interface{}, opt *SolrAddOption)
 	if err != nil {
 		log.Println("Failed at marshaling json structure, ", err)
 	}
+
 	respB, err := PostUpdate(sc.host,
 		sc.port,
 		b)

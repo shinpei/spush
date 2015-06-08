@@ -33,7 +33,7 @@ func myworker(sc *golr.SolrConnector, inputChan chan []Page, recvChan chan []byt
 	defer wg.Done()
 	for pages := range inputChan {
 		opt.RecieverChannel = recvChan
-		sc.AddDocuments(pages, opt)
+		go sc.AddDocuments(pages, opt)
 		msg := <-opt.RecieverChannel
 		print(string(msg[:]))
 	}
@@ -42,7 +42,7 @@ func myworker(sc *golr.SolrConnector, inputChan chan []Page, recvChan chan []byt
 func (w *WikipediaXMLWalker) Walk(sc *golr.SolrConnector,
 	opt *golr.SolrAddOption, decoder *xml.Decoder) {
 	var inElement string
-	PageChunk := 500
+	PageChunk := 300
 	var pa []Page = make([]Page, opt.Concurrency*PageChunk)
 	idx := 0
 	var total int64 = 0
