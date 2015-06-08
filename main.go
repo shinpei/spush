@@ -8,7 +8,7 @@ import (
 	"runtime"
 )
 
-var inputFile = flag.String("infile", "jawiki-latest-pages-articles.xml", "Input file path")
+var inputFilePath = flag.String("infile", "jawiki-latest-pages-articles.xml", "Input file path")
 
 type Data struct {
 	Id        string `json:"id"`
@@ -16,6 +16,8 @@ type Data struct {
 	Text      string `json:"text"`
 	TextCount int    `json:"text_count"`
 }
+
+//TODO: App-specific structure will be removed
 
 func main() {
 	con := golr.Connect("localhost", 8983)
@@ -27,13 +29,19 @@ func main() {
 		TextCount: 12,
 	},
 	}
-	opt := &golr.SolrAddOption{
-		Concurrency: runtime.NumCPU(),
-	}
-	con.AddDocuments(d, opt)
 
-	//con.AddJSONFile(myjson, opt)
-	con.AddXMLFile(*inputFile, opt)
+	recvChan := make(chan []byte)
+	opt := &golr.SolrAddOption{
+		Concurrency:     runtime.NumCPU(),
+		ReceiverChannel: recvChan,
+	}
+	go con.AddDocuments(d, opt)
+	msg := <-recvChan
+	println(string(msg[:]))
+
+	wikiWalker := &WikipediaXMLWalker{}
+	con.UploadXMLFile(*inputFilePath, wikiWalker, opt)
+
 }
 
 func Get(url string) ([]byte, error) {
