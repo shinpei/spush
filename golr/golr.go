@@ -18,7 +18,7 @@ type SolrConnector struct {
 
 type SolrAddOption struct {
 	Concurrency     int
-	ReceiverChannel chan []byte
+	RecieverChannel chan []byte
 }
 
 // Assumes it'll get arrays of some data structure
@@ -42,8 +42,7 @@ func (sc *SolrConnector) AddDocuments(container interface{}, opt *SolrAddOption)
 	if err != nil {
 		log.Println(err)
 	}
-
-	opt.ReceiverChannel <- respB
+	opt.RecieverChannel <- respB
 }
 
 func Connect(host string, port int) *SolrConnector {
@@ -51,6 +50,7 @@ func Connect(host string, port int) *SolrConnector {
 }
 
 func PostUpdate(host string, port int, payload []byte) ([]byte, error) {
+
 	client := &http.Client{}
 	url := fmt.Sprintf("http://%s:%d/solr/update/json?commit=true", host, port)
 	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))

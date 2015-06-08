@@ -29,19 +29,20 @@ func CannoTitle(title string) string {
 
 type WikipediaXMLWalker struct{}
 
-func myworker(sc *golr.SolrConnector, inputChan chan interface{}, opt *golr.SolrAddOption, wg *sync.WaitGroup) {
+func myworker(sc *golr.SolrConnector, inputChan chan []Page, recvChan chan []byte, opt *golr.SolrAddOption, wg *sync.WaitGroup) {
 	defer wg.Done()
-	recvChan := make(chan []byte)
-	sc.AddDocuments(<-inputChan, opt)
-	msg := <-recvChan
-	println(string(msg[:]))
-	close(recvChan)
+	for pages := range inputChan {
+		opt.RecieverChannel = recvChan
+		sc.AddDocuments(pages, opt)
+		msg := <-opt.RecieverChannel
+		print(string(msg[:]))
+	}
 }
 
 func (w *WikipediaXMLWalker) Walk(sc *golr.SolrConnector,
 	opt *golr.SolrAddOption, decoder *xml.Decoder) {
 	var inElement string
-	PageChunk := 10
+	PageChunk := 500
 	var pa []Page = make([]Page, opt.Concurrency*PageChunk)
 	idx := 0
 	var total int64 = 0
@@ -49,10 +50,12 @@ func (w *WikipediaXMLWalker) Walk(sc *golr.SolrConnector,
 
 	// prepare goroutines
 	wg := new(sync.WaitGroup)
-	inputChan := make(chan interface{})
+	inputChan := make(chan []Page)
+	recvChan := make(chan []byte)
+	opt.RecieverChannel = recvChan
 	for i := 0; i < opt.Concurrency; i++ {
 		wg.Add(1)
-		go myworker(sc, inputChan, opt, wg)
+		go myworker(sc, inputChan, recvChan, opt, wg)
 	}
 
 	for {
@@ -89,9 +92,8 @@ func (w *WikipediaXMLWalker) Walk(sc *golr.SolrConnector,
 		if idx == opt.Concurrency*PageChunk-1 {
 			fmt.Println("Added " + strconv.FormatInt(total, 10) + "/" + strconv.FormatInt(pushed, 10) + " for now..")
 			inputChan <- pa
-			//			go sc.AddDocuments(pa, opt)
 			//			msg := <-recvChan
-			//			println(string(msg[:]))
+			//			fmt.Println("INFO: " + string(msg[:]))
 			idx = 0
 		}
 	}

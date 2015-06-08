@@ -33,7 +33,7 @@ func main() {
 	recvChan := make(chan []byte)
 	opt := &golr.SolrAddOption{
 		Concurrency:     runtime.NumCPU(),
-		ReceiverChannel: recvChan,
+		RecieverChannel: recvChan,
 	}
 	go con.AddDocuments(d, opt)
 	msg := <-recvChan
