@@ -37,6 +37,7 @@ func main() {
 	}
 	go con.AddDocuments(d, opt)
 	msg := <-recvChan
+	close(recvChan)
 	println(string(msg[:]))
 
 	wikiWalker := &WikipediaXMLWalker{}

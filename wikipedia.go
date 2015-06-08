@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var filter, _ = regexp.Compile("^%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%3A.*|^help%3A.*|^talk%3A.*|^special%3A.*|^wikipedia%3A.*|^wikionary%3A.*|^user%3A.*|^user_talk%3A.*|^portal%3A.*|^mediawiki%3A.*|^template%3A.*|^category%3A.*|^wp%3A.*")
@@ -28,13 +29,32 @@ func CannoTitle(title string) string {
 
 type WikipediaXMLWalker struct{}
 
+func myworker(sc *golr.SolrConnector, inputChan chan interface{}, opt *golr.SolrAddOption, wg *sync.WaitGroup) {
+	defer wg.Done()
+	recvChan := make(chan []byte)
+	sc.AddDocuments(<-inputChan, opt)
+	msg := <-recvChan
+	println(string(msg[:]))
+	close(recvChan)
+}
+
 func (w *WikipediaXMLWalker) Walk(sc *golr.SolrConnector,
 	opt *golr.SolrAddOption, decoder *xml.Decoder) {
 	var inElement string
-	var pa []Page = make([]Page, opt.Concurrency*500)
+	PageChunk := 10
+	var pa []Page = make([]Page, opt.Concurrency*PageChunk)
 	idx := 0
 	var total int64 = 0
 	var pushed int64 = 0
+
+	// prepare goroutines
+	wg := new(sync.WaitGroup)
+	inputChan := make(chan interface{})
+	for i := 0; i < opt.Concurrency; i++ {
+		wg.Add(1)
+		go myworker(sc, inputChan, opt, wg)
+	}
+
 	for {
 		t, _ := decoder.Token()
 		if t == nil {
@@ -65,13 +85,17 @@ func (w *WikipediaXMLWalker) Walk(sc *golr.SolrConnector,
 		default:
 			break
 		}
-		if idx == opt.Concurrency*500-1 {
+
+		if idx == opt.Concurrency*PageChunk-1 {
 			fmt.Println("Added " + strconv.FormatInt(total, 10) + "/" + strconv.FormatInt(pushed, 10) + " for now..")
-
-			sc.AddDocuments(pa, opt)
-
+			inputChan <- pa
+			//			go sc.AddDocuments(pa, opt)
+			//			msg := <-recvChan
+			//			println(string(msg[:]))
 			idx = 0
 		}
 	}
+	close(inputChan)
+	wg.Wait()
 
 }

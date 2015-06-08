@@ -42,6 +42,7 @@ func (sc *SolrConnector) AddDocuments(container interface{}, opt *SolrAddOption)
 	if err != nil {
 		log.Println(err)
 	}
+
 	opt.ReceiverChannel <- respB
 }
 
@@ -54,8 +55,10 @@ func PostUpdate(host string, port int, payload []byte) ([]byte, error) {
 	url := fmt.Sprintf("http://%s:%d/solr/update/json?commit=true", host, port)
 	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
 	req.Header.Add("Content-type", "application/json")
+
 	//	dump, _ := httputil.DumpRequestOut(req, true)
 	//	fmt.Printf("%s", dump)
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
