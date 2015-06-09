@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/shinpei/spush/golr"
 	"runtime"
 )
@@ -25,12 +26,11 @@ func main() {
 	},
 	}
 
-	//	recvChan := make(chan []byte)
 	opt := &golr.SolrAddOption{
 		Concurrency: runtime.NumCPU(),
 	}
 	msg := <-con.AddDocuments(d, opt)
-	println(string(msg[:]))
+	fmt.Println(string(msg[:]))
 
 	wikiWalker := &WikipediaXMLWalker{}
 	con.UploadXMLFile(*inputFilePath, wikiWalker, opt)

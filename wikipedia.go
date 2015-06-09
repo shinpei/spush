@@ -32,7 +32,7 @@ func (w *WikipediaXMLWalker) Walk(inputChan chan interface{},
 	opt *golr.SolrAddOption, decoder *xml.Decoder) {
 
 	var inElement string
-	PageChunk := 300
+	PageChunk := 500
 	var pa []Page = make([]Page, opt.Concurrency*PageChunk)
 	idx := 0
 	var total int64 = 0

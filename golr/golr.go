@@ -21,6 +21,10 @@ type SolrAddOption struct {
 	Concurrency int
 }
 
+func Connect(host string, port int) *SolrConnector {
+	return &SolrConnector{host, port}
+}
+
 // Assumes it'll get arrays of some data structure
 func (sc *SolrConnector) AddDocuments(container interface{}, opt *SolrAddOption) <-chan []byte {
 	recvChan := make(chan []byte)
@@ -49,14 +53,10 @@ func (sc *SolrConnector) AddDocuments(container interface{}, opt *SolrAddOption)
 	return recvChan
 }
 
-func Connect(host string, port int) *SolrConnector {
-	return &SolrConnector{host, port}
-}
-
 func PostUpdate(host string, port int, payload []byte) ([]byte, error) {
 
 	client := &http.Client{}
-	url := fmt.Sprintf("http://%s:%d/solr/update/json?commit=true", host, port)
+	url := fmt.Sprintf("http://%s:%d/solr/update/json", host, port)
 	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
 	req.Header.Add("Content-type", "application/json")
 
@@ -75,6 +75,8 @@ func PostUpdate(host string, port int, payload []byte) ([]byte, error) {
 	log.Printf("Recieved %d bytes.\n", len(body))
 	return body, nil
 }
+
+//func PostSelect (
 
 type XMLNodeWalker interface {
 	Walk(inputChan chan interface{}, opt *SolrAddOption, decoder *xml.Decoder)
