@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 )
 
 type SolrConnector struct {
@@ -76,7 +77,7 @@ func PostUpdate(host string, port int, payload []byte) ([]byte, error) {
 }
 
 type XMLNodeWalker interface {
-	Walk(sc *SolrConnector, opt *SolrAddOption, decoder *xml.Decoder)
+	Walk(inputChan chan interface{}, opt *SolrAddOption, decoder *xml.Decoder)
 }
 
 func (sc *SolrConnector) UploadXMLFile(
@@ -88,9 +89,28 @@ func (sc *SolrConnector) UploadXMLFile(
 		log.Println("Error opening file:", err)
 		return
 	}
+
 	defer xmlFile.Close()
-
 	decoder := xml.NewDecoder(xmlFile)
-	walker.Walk(sc, opt, decoder)
 
+	// prepare goroutines
+	wg := new(sync.WaitGroup)
+	inputChan := make(chan interface{})
+	for i := 0; i < opt.Concurrency; i++ {
+		wg.Add(1)
+		go myworker(sc, inputChan, opt, wg)
+	}
+
+	walker.Walk(inputChan, opt, decoder)
+
+	close(inputChan)
+	wg.Wait()
+}
+
+func myworker(sc *SolrConnector, inputChan chan interface{}, opt *SolrAddOption, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for pages := range inputChan {
+		msg := <-sc.AddDocuments(pages, opt)
+		print(string(msg[:]))
+	}
 }
