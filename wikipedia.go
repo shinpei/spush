@@ -29,12 +29,10 @@ func CannoTitle(title string) string {
 
 type WikipediaXMLWalker struct{}
 
-func myworker(sc *golr.SolrConnector, inputChan chan []Page, recvChan chan []byte, opt *golr.SolrAddOption, wg *sync.WaitGroup) {
+func myworker(sc *golr.SolrConnector, inputChan chan []Page, opt *golr.SolrAddOption, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for pages := range inputChan {
-		opt.RecieverChannel = recvChan
-		go sc.AddDocuments(pages, opt)
-		msg := <-opt.RecieverChannel
+		msg := <-sc.AddDocuments(pages, opt)
 		print(string(msg[:]))
 	}
 }
@@ -51,11 +49,9 @@ func (w *WikipediaXMLWalker) Walk(sc *golr.SolrConnector,
 	// prepare goroutines
 	wg := new(sync.WaitGroup)
 	inputChan := make(chan []Page)
-	recvChan := make(chan []byte)
-	opt.RecieverChannel = recvChan
 	for i := 0; i < opt.Concurrency; i++ {
 		wg.Add(1)
-		go myworker(sc, inputChan, recvChan, opt, wg)
+		go myworker(sc, inputChan, opt, wg)
 	}
 
 	for {
@@ -96,7 +92,6 @@ func (w *WikipediaXMLWalker) Walk(sc *golr.SolrConnector,
 		}
 	}
 	close(inputChan)
-	close(recvChan)
 	wg.Wait()
 
 }

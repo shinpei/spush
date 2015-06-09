@@ -17,12 +17,12 @@ type SolrConnector struct {
 }
 
 type SolrAddOption struct {
-	Concurrency     int
-	RecieverChannel chan []byte
+	Concurrency int
 }
 
 // Assumes it'll get arrays of some data structure
-func (sc *SolrConnector) AddDocuments(container interface{}, opt *SolrAddOption) {
+func (sc *SolrConnector) AddDocuments(container interface{}, opt *SolrAddOption) <-chan []byte {
+	recvChan := make(chan []byte)
 
 	var err error
 	// todo: size constrain should be placed here
@@ -31,19 +31,21 @@ func (sc *SolrConnector) AddDocuments(container interface{}, opt *SolrAddOption)
 			log.Printf("Error occured, uploading document failed")
 		}
 	}()
+	go func(rC chan []byte) {
+		b, err := json.Marshal(container)
+		if err != nil {
+			log.Println("Failed at marshaling json structure, ", err)
+		}
 
-	b, err := json.Marshal(container)
-	if err != nil {
-		log.Println("Failed at marshaling json structure, ", err)
-	}
-
-	respB, err := PostUpdate(sc.host,
-		sc.port,
-		b)
-	if err != nil {
-		log.Println(err)
-	}
-	opt.RecieverChannel <- respB
+		respB, err := PostUpdate(sc.host,
+			sc.port,
+			b)
+		if err != nil {
+			log.Println(err)
+		}
+		rC <- respB
+	}(recvChan)
+	return recvChan
 }
 
 func Connect(host string, port int) *SolrConnector {

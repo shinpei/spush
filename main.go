@@ -6,32 +6,32 @@ import (
 	"runtime"
 )
 
-var inputFilePath = flag.String("infile", "jawiki-latest-pages-articles.xml", "Input file path")
-var hostnameFlag = flag.String("hostname", "localhost", "Input solr server")
-var portFlag = flag.Int("port", 8983, "Input port number")
+var inputFilePath = flag.String("f", "jawiki-latest-pages-articles.xml", "Input file path")
+var hostnameFlag = flag.String("h", "localhost", "Input solr server")
+var portFlag = flag.Int("p", 8983, "Input port number")
 
 func main() {
+
+	flag.Parse()
+
+	title := "spush"
+	textBody := "spush is a tool for pushing documents to solr"
 	con := golr.Connect(*hostnameFlag, *portFlag)
 	d := []Page{{
-		Id:        "hige3",
-		Title:     "hoge",
-		Text:      "fuga",
-		TextCount: 12,
+		Id:        "spush",
+		Title:     title,
+		Text:      textBody,
+		TextCount: len(textBody),
 	},
 	}
 
-	recvChan := make(chan []byte)
+	//	recvChan := make(chan []byte)
 	opt := &golr.SolrAddOption{
-		Concurrency:     runtime.NumCPU(),
-		RecieverChannel: recvChan,
+		Concurrency: runtime.NumCPU(),
 	}
-	go con.AddDocuments(d, opt)
-	msg := <-recvChan
-	close(recvChan)
-
+	msg := <-con.AddDocuments(d, opt)
 	println(string(msg[:]))
 
 	wikiWalker := &WikipediaXMLWalker{}
 	con.UploadXMLFile(*inputFilePath, wikiWalker, opt)
-
 }
