@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/shinpei/spush/golr"
+	"github.com/shinpei/golr"
 	"net/url"
 	"regexp"
 	"strconv"

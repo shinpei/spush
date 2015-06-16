@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/shinpei/spush/golr"
+	"github.com/shinpei/golr"
 	"runtime"
 )
 
