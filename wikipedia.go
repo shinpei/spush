@@ -26,7 +26,9 @@ func CannoTitle(title string) string {
 	return can
 }
 
-type WikipediaXMLWalker struct{}
+type WikipediaXMLWalker struct {
+	MaxDocumentThrow int64
+}
 
 func (w *WikipediaXMLWalker) Walk(inputChan chan interface{},
 	opt *golr.SolrAddOption, decoder *xml.Decoder) {
@@ -34,9 +36,9 @@ func (w *WikipediaXMLWalker) Walk(inputChan chan interface{},
 	var inElement string
 	PageChunk := 500
 	var pa []Page = make([]Page, opt.Concurrency*PageChunk)
-	idx := 0
-	var total int64 = 0
-	var pushed int64 = 0
+	stackIndex := 0
+	var totalDocumentCount int64 = 0
+	var parsedDocumentCount int64 = 0
 
 	for {
 		t, _ := decoder.Token()
@@ -54,18 +56,28 @@ func (w *WikipediaXMLWalker) Walk(inputChan chan interface{},
 				if !m {
 					p.Title, _ = url.QueryUnescape(p.Title)
 					p.TextCount = len(p.Text)
-					total++
-					pa[idx] = p
-					idx++
+					totalDocumentCount++
+					pa[stackIndex] = p
+					stackIndex++
 				}
-				pushed++
+				parsedDocumentCount++
 			}
 			break
 		default:
 			break
 		}
 
-		if idx == opt.Concurrency*PageChunk-1 {
+		if total == w.MaxDocumentThrow {
+			// stop throwing
+			return
+		}
+		if PageChunk-1 == 0 && stackIndex == 1 {
+
+			fmt.Println("Added " + strconv.FormatInt(total, 10) + "/" + strconv.FormatInt(pushed, 10) + " for now..")
+			inputChan <- pa
+			idx = 0
+
+		} else if stackIndex != 0 && stackIndex == PageChunk-1 {
 			fmt.Println("Added " + strconv.FormatInt(total, 10) + "/" + strconv.FormatInt(pushed, 10) + " for now..")
 			inputChan <- pa
 			idx = 0

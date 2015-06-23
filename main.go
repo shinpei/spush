@@ -10,6 +10,7 @@ import (
 var inputFilePath = flag.String("f", "jawiki-latest-pages-articles.xml", "Input file path")
 var hostnameFlag = flag.String("h", "localhost", "Input solr server")
 var portFlag = flag.Int("p", 8983, "Input port number")
+var maxDocumentFlag = flag.Int("mx", 10000, "Input max document number")
 
 func main() {
 
