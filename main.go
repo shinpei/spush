@@ -33,6 +33,8 @@ func main() {
 	msg := <-con.AddDocuments(d, opt)
 	fmt.Println(string(msg[:]))
 
-	wikiWalker := &WikipediaXMLWalker{}
+	wikiWalker := &WikipediaXMLWalker{
+		MaxDocumentThrow: int64(*maxDocumentFlag),
+	}
 	con.UploadXMLFile(*inputFilePath, wikiWalker, opt)
 }

@@ -37,7 +37,7 @@ func (w *WikipediaXMLWalker) Walk(inputChan chan interface{},
 	PageChunk := 500
 	var pa []Page = make([]Page, opt.Concurrency*PageChunk)
 	stackIndex := 0
-	var totalDocumentCount int64 = 0
+	var sumOfPushingDocument int64 = 0
 	var parsedDocumentCount int64 = 0
 
 	for {
@@ -56,7 +56,7 @@ func (w *WikipediaXMLWalker) Walk(inputChan chan interface{},
 				if !m {
 					p.Title, _ = url.QueryUnescape(p.Title)
 					p.TextCount = len(p.Text)
-					totalDocumentCount++
+					sumOfPushingDocument++
 					pa[stackIndex] = p
 					stackIndex++
 				}
@@ -67,20 +67,21 @@ func (w *WikipediaXMLWalker) Walk(inputChan chan interface{},
 			break
 		}
 
-		if total == w.MaxDocumentThrow {
+		if sumOfPushingDocument == w.MaxDocumentThrow {
 			// stop throwing
+			fmt.Println("Pushed, ", stackIndex, " docs")
 			return
 		}
 		if PageChunk-1 == 0 && stackIndex == 1 {
 
-			fmt.Println("Added " + strconv.FormatInt(total, 10) + "/" + strconv.FormatInt(pushed, 10) + " for now..")
+			fmt.Println("Added " + strconv.FormatInt(sumOfPushingDocument, 10) + "/" + strconv.FormatInt(parsedDocumentCount, 10) + " for now..")
 			inputChan <- pa
-			idx = 0
+			stackIndex = 0
 
 		} else if stackIndex != 0 && stackIndex == PageChunk-1 {
-			fmt.Println("Added " + strconv.FormatInt(total, 10) + "/" + strconv.FormatInt(pushed, 10) + " for now..")
+			fmt.Println("Added " + strconv.FormatInt(sumOfPushingDocument, 10) + "/" + strconv.FormatInt(parsedDocumentCount, 10) + " for now..")
 			inputChan <- pa
-			idx = 0
+			stackIndex = 0
 		}
 	}
 }
